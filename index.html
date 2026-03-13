@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>メーカーデータベース</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif; background: #f5f5f5; color: #333; }
+
+  /* Login */
+  .login-container { max-width: 360px; margin: 120px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .login-container h1 { font-size: 20px; margin-bottom: 24px; text-align: center; }
+  .login-container input { width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+  .login-container button { width: 100%; padding: 10px; background: #3ecf8e; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
+  .login-container button:hover { background: #38b67e; }
+  .login-error { color: #e53e3e; font-size: 13px; margin-bottom: 8px; }
+
+  /* Header */
+  .header { background: #1e1e1e; color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 16px; font-weight: 600; }
+  .header button { background: none; color: #aaa; border: 1px solid #555; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .header button:hover { color: #fff; border-color: #888; }
+
+  /* Main */
+  .main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+  /* Search & Actions */
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar input { flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+  .btn { padding: 8px 16px; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .btn-primary { background: #3ecf8e; color: #fff; }
+  .btn-primary:hover { background: #38b67e; }
+  .btn-danger { background: #e53e3e; color: #fff; }
+  .btn-danger:hover { background: #c53030; }
+  .btn-secondary { background: #e2e8f0; color: #333; }
+  .btn-secondary:hover { background: #cbd5e0; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f7f7f7; padding: 10px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #e2e8f0; white-space: nowrap; position: sticky; top: 0; }
+  td { padding: 8px; border-bottom: 1px solid #f0f0f0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr:hover { background: #f9fafb; }
+  td a { color: #3182ce; text-decoration: none; }
+  td a:hover { text-decoration: underline; }
+  .actions-cell { white-space: nowrap; }
+  .actions-cell button { padding: 2px 8px; margin-right: 4px; font-size: 12px; border-radius: 3px; cursor: pointer; }
+  .btn-edit { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+  .btn-delete { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+
+  /* Pagination */
+  .pagination { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; font-size: 13px; }
+  .pagination button { padding: 6px 12px; }
+  .page-info { color: #666; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: #fff; border-radius: 8px; padding: 24px; width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 16px; margin-bottom: 16px; }
+  .modal label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; margin-top: 12px; }
+  .modal input, .modal textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+  .modal textarea { height: 60px; resize: vertical; }
+  .modal-actions { margin-top: 20px; display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* Count */
+  .count-bar { font-size: 13px; color: #666; margin-bottom: 8px; }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen" class="login-container">
+  <h1>メーカーデータベース</h1>
+  <div id="loginError" class="login-error hidden"></div>
+  <input type="email" id="loginEmail" placeholder="メールアドレス" value="randd_2foods@two2.jp">
+  <input type="password" id="loginPassword" placeholder="パスワード">
+  <button onclick="doLogin()">ログイン</button>
+</div>
+
+<!-- Main App -->
+<div id="appScreen" class="hidden">
+  <div class="header">
+    <h1>メーカーデータベース</h1>
+    <div>
+      <span id="userEmail" style="font-size:12px;color:#aaa;margin-right:12px;"></span>
+      <button onclick="doLogout()">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="会社名・担当者名・取扱い原料で検索..." onkeyup="if(event.key==='Enter') doSearch()">
+      <button class="btn btn-secondary" onclick="doSearch()">検索</button>
+      <button class="btn btn-primary" onclick="openAddModal()">+ 新規追加</button>
+    </div>
+
+    <div class="count-bar" id="countBar"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>企業名</th>
+            <th>部署名</th>
+            <th>担当者名</th>
+            <th>電話</th>
+            <th>携帯</th>
+            <th>メール</th>
+            <th>取扱い原料</th>
+            <th>カタログ</th>
+            <th>備考</th>
+            <th>名刺交換日</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">新規追加</h2>
+    <input type="hidden" id="editId">
+
+    <label>企業名 *</label>
+    <input type="text" id="fCompany">
+
+    <label>部署名</label>
+    <input type="text" id="fDept">
+
+    <label>担当者名</label>
+    <input type="text" id="fPerson">
+
+    <label>電話</label>
+    <input type="text" id="fPhone">
+
+    <label>携帯</label>
+    <input type="text" id="fMobile">
+
+    <label>メール</label>
+    <input type="email" id="fEmail">
+
+    <label>取扱い原料</label>
+    <textarea id="fProducts"></textarea>
+
+    <label>カタログURL</label>
+    <input type="text" id="fCatalog">
+
+    <label>備考</label>
+    <textarea id="fNotes"></textarea>
+
+    <label>名刺交換日</label>
+    <input type="text" id="fCardDate">
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveRecord()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:400px;">
+    <h2>削除確認</h2>
+    <p style="margin:12px 0;" id="deleteMsg"></p>
+    <input type="hidden" id="deleteId">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">キャンセル</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">削除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ipzawsdsktijhibvjegg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwemF3c2Rza3RpamhpYnZqZWdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDczMTEsImV4cCI6MjA4ODg4MzMxMX0.vSedQPfWlckaiSXugJ3qgsIYkTUftymoSv_cQm7HVA4';
+
+const { createClient } = window.supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let totalCount = 0;
+let currentSearch = '';
+
+// --- Auth ---
+async function checkSession() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    showApp(session.user.email);
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.classList.add('hidden');
+
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) {
+    errEl.textContent = 'ログインに失敗しました: ' + error.message;
+    errEl.classList.remove('hidden');
+    return;
+  }
+  showApp(data.user.email);
+}
+
+async function doLogout() {
+  await db.auth.signOut();
+  document.getElementById('appScreen').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginPassword').value = '';
+}
+
+function showApp(email) {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
+  document.getElementById('userEmail').textContent = email;
+  doSearch();
+}
+
+// --- Search & Fetch ---
+async function doSearch() {
+  currentSearch = document.getElementById('searchInput').value.trim();
+  await fetchData();
+}
+
+async function fetchData() {
+  // 全件取得（1000件まで1回、超える場合は追加取得）
+  let allData = [];
+  let from = 0;
+  const batchSize = 1000;
+
+  while (true) {
+    let query = db
+      .from('manufacturers')
+      .select('*', { count: 'exact' })
+      .order('company_name')
+      .range(from, from + batchSize - 1);
+
+    if (currentSearch) {
+      query = query.or(
+        `company_name.ilike.%${currentSearch}%,contact_person.ilike.%${currentSearch}%,products.ilike.%${currentSearch}%`
+      );
+    }
+
+    const { data, count, error } = await query;
+
+    if (error) {
+      alert('データ取得エラー: ' + error.message);
+      return;
+    }
+
+    if (from === 0) totalCount = count || 0;
+    allData = allData.concat(data || []);
+
+    if (!data || data.length < batchSize) break;
+    from += batchSize;
+  }
+
+  renderTable(allData);
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById('tableBody');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:#999;">データがありません</td></tr>';
+    document.getElementById('countBar').textContent = '';
+    return;
+  }
+
+  document.getElementById('countBar').textContent = `${totalCount} 件`;
+
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td title="${esc(r.company_name)}">${esc(r.company_name)}</td>
+    <td title="${esc(r.department)}">${esc(r.department)}</td>
+    <td title="${esc(r.contact_person)}">${esc(r.contact_person)}</td>
+    <td>${esc(r.phone)}</td>
+    <td>${esc(r.mobile)}</td>
+    <td>${r.email ? '<a href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a>' : ''}</td>
+    <td title="${esc(r.products)}">${esc(r.products)}</td>
+    <td>${r.catalog_url ? '<a href="' + esc(r.catalog_url) + '" target="_blank">リンク</a>' : ''}</td>
+    <td title="${esc(r.notes)}">${esc(r.notes)}</td>
+    <td>${esc(r.card_exchange_date)}</td>
+    <td class="actions-cell">
+      <button class="btn-edit" onclick="openEditModal(${r.id})">編集</button>
+      <button class="btn-delete" onclick="openDeleteModal(${r.id}, '${esc(r.company_name)} - ${esc(r.contact_person)}')">削除</button>
+    </td>
+  </tr>`).join('');
+}
+
+function esc(val) {
+  if (!val) return '';
+  return String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// --- Add/Edit Modal ---
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = '新規追加';
+  document.getElementById('editId').value = '';
+  clearForm();
+  document.getElementById('modal').classList.add('active');
+}
+
+async function openEditModal(id) {
+  const { data, error } = await db.from('manufacturers').select('*').eq('id', id).single();
+  if (error || !data) { alert('データ取得エラー'); return; }
+
+  document.getElementById('modalTitle').textContent = '編集';
+  document.getElementById('editId').value = data.id;
+  document.getElementById('fCompany').value = data.company_name || '';
+  document.getElementById('fDept').value = data.department || '';
+  document.getElementById('fPerson').value = data.contact_person || '';
+  document.getElementById('fPhone').value = data.phone || '';
+  document.getElementById('fMobile').value = data.mobile || '';
+  document.getElementById('fEmail').value = data.email || '';
+  document.getElementById('fProducts').value = data.products || '';
+  document.getElementById('fCatalog').value = data.catalog_url || '';
+  document.getElementById('fNotes').value = data.notes || '';
+  document.getElementById('fCardDate').value = data.card_exchange_date || '';
+  document.getElementById('modal').classList.add('active');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+function clearForm() {
+  ['fCompany','fDept','fPerson','fPhone','fMobile','fEmail','fProducts','fCatalog','fNotes','fCardDate'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+async function saveRecord() {
+  const company = document.getElementById('fCompany').value.trim();
+  if (!company) { alert('企業名は必須です'); return; }
+
+  const record = {
+    company_name: company,
+    department: document.getElementById('fDept').value.trim() || null,
+    contact_person: document.getElementById('fPerson').value.trim() || null,
+    phone: document.getElementById('fPhone').value.trim() || null,
+    mobile: document.getElementById('fMobile').value.trim() || null,
+    email: document.getElementById('fEmail').value.trim() || null,
+    products: document.getElementById('fProducts').value.trim() || null,
+    catalog_url: document.getElementById('fCatalog').value.trim() || null,
+    notes: document.getElementById('fNotes').value.trim() || null,
+    card_exchange_date: document.getElementById('fCardDate').value.trim() || null,
+  };
+
+  const editId = document.getElementById('editId').value;
+  let error;
+
+  if (editId) {
+    ({ error } = await db.from('manufacturers').update(record).eq('id', editId));
+  } else {
+    ({ error } = await db.from('manufacturers').insert(record));
+  }
+
+  if (error) { alert('保存エラー: ' + error.message); return; }
+
+  closeModal();
+  fetchData();
+}
+
+// --- Delete ---
+function openDeleteModal(id, name) {
+  document.getElementById('deleteId').value = id;
+  document.getElementById('deleteMsg').textContent = `「${name}」を削除しますか？`;
+  document.getElementById('deleteModal').classList.add('active');
+}
+
+function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('active'); }
+
+async function confirmDelete() {
+  const id = document.getElementById('deleteId').value;
+  const { error } = await db.from('manufacturers').delete().eq('id', id);
+  if (error) { alert('削除エラー: ' + error.message); return; }
+  closeDeleteModal();
+  fetchData();
+}
+
+// --- Init ---
+checkSession();
+</script>
+</body>
+</html>
