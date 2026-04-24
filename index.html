@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>R&D チームHub</title>
+<title>R&D Database</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -11,7 +11,7 @@
 
   /* Login */
   .login-container { max-width: 360px; margin: 120px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  .login-container h1 { font-size: 20px; margin-bottom: 4px; text-align: center; }
+  .login-container h1 { font-size: 18px; margin-bottom: 4px; text-align: center; }
   .login-container p { font-size: 12px; color: #888; text-align: center; margin-bottom: 24px; }
   .login-container input { width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
   .login-container button { width: 100%; padding: 10px; background: #3ecf8e; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
@@ -49,9 +49,9 @@
   .btn-secondary:hover { background: #cbd5e0; }
 
   /* Table */
-  .table-wrap { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .table-wrap { overflow: auto; max-height: calc(100vh - 210px); background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { background: #f7f7f7; padding: 10px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #e2e8f0; white-space: nowrap; position: sticky; top: 0; }
+  th { background: #f7f7f7; padding: 10px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #e2e8f0; white-space: nowrap; position: sticky; top: 0; z-index: 2; }
   td { padding: 8px; border-bottom: 1px solid #f0f0f0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
   tr:hover { background: #f9fafb; }
   td a { color: #3182ce; text-decoration: none; }
@@ -110,7 +110,7 @@
 
 <!-- Login Screen -->
 <div id="loginScreen" class="login-container">
-  <h1>R&D チームHub</h1>
+  <h1>R&D Database</h1>
   <p>原材料・メーカー・ナレッジDB</p>
   <div id="loginError" class="login-error hidden"></div>
   <input type="email" id="loginEmail" placeholder="メールアドレス" value="randd_2foods@two2.jp">
@@ -122,7 +122,7 @@
 <div id="appScreen" class="hidden">
   <div class="header">
     <div class="header-left">
-      <h1>R&D チームHub</h1>
+      <h1>R&D Database</h1>
       <div class="tab-nav">
         <button class="tab-btn active" onclick="switchTab('makers')">メーカー連絡先</button>
         <button class="tab-btn" onclick="switchTab('materials')">原材料検索</button>
