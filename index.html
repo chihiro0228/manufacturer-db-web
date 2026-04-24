@@ -610,7 +610,7 @@ async function fetchKnowledge() {
   const search = document.getElementById('knSearch').value.trim();
   const category = document.getElementById('knCategory').value.trim();
   document.getElementById('knGrid').innerHTML = '<div class="loading">読み込み中...</div>';
-  let q = devDb.from('原材料ナレッジ').select('*', { count: 'exact' }).order('記録日', { ascending: false });
+  let q = devDb.from('material_knowledge').select('*', { count: 'exact' }).order('記録日', { ascending: false });
   if (search) q = q.or(`原材料名.ilike.%${search}%,メーカー名.ilike.%${search}%,内容.ilike.%${search}%`);
   if (category) q = q.ilike('カテゴリ', `%${category}%`);
   const { data, count, error } = await q;
