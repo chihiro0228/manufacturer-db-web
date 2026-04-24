@@ -3,24 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>メーカーデータベース</title>
+<title>R&D チームHub</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif; background: #f5f5f5; color: #333; }
+
+  /* Login */
   .login-container { max-width: 360px; margin: 120px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  .login-container h1 { font-size: 20px; margin-bottom: 24px; text-align: center; }
+  .login-container h1 { font-size: 20px; margin-bottom: 4px; text-align: center; }
+  .login-container p { font-size: 12px; color: #888; text-align: center; margin-bottom: 24px; }
   .login-container input { width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
   .login-container button { width: 100%; padding: 10px; background: #3ecf8e; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
   .login-container button:hover { background: #38b67e; }
   .login-error { color: #e53e3e; font-size: 13px; margin-bottom: 8px; }
-  .header { background: #1e1e1e; color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
-  .header h1 { font-size: 16px; font-weight: 600; }
-  .header button { background: none; color: #aaa; border: 1px solid #555; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-  .header button:hover { color: #fff; border-color: #888; }
-  .main { max-width: 1200px; margin: 0 auto; padding: 16px; }
-  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .toolbar input { flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+
+  /* Header */
+  .header { background: #1e1e1e; color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+  .header-left { display: flex; align-items: center; gap: 24px; }
+  .header h1 { font-size: 16px; font-weight: 600; white-space: nowrap; }
+  .tab-nav { display: flex; gap: 4px; }
+  .tab-btn { background: none; color: #aaa; border: 1px solid transparent; padding: 5px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; white-space: nowrap; transition: all 0.15s; }
+  .tab-btn:hover { color: #fff; border-color: #555; }
+  .tab-btn.active { color: #fff; background: #3ecf8e; border-color: #3ecf8e; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .header-right span { font-size: 12px; color: #aaa; }
+  .header-right button { background: none; color: #aaa; border: 1px solid #555; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .header-right button:hover { color: #fff; border-color: #888; }
+
+  /* Main */
+  .main { max-width: 1400px; margin: 0 auto; padding: 16px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Toolbar */
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .toolbar input, .toolbar select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+  .toolbar input[type=text] { flex: 1; min-width: 200px; }
   .btn { padding: 8px 16px; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; white-space: nowrap; }
   .btn-primary { background: #3ecf8e; color: #fff; }
   .btn-primary:hover { background: #38b67e; }
@@ -28,10 +47,12 @@
   .btn-danger:hover { background: #c53030; }
   .btn-secondary { background: #e2e8f0; color: #333; }
   .btn-secondary:hover { background: #cbd5e0; }
+
+  /* Table */
   .table-wrap { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { background: #f7f7f7; padding: 10px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #e2e8f0; white-space: nowrap; position: sticky; top: 0; }
-  td { padding: 8px; border-bottom: 1px solid #f0f0f0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td { padding: 8px; border-bottom: 1px solid #f0f0f0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
   tr:hover { background: #f9fafb; }
   td a { color: #3182ce; text-decoration: none; }
   td a:hover { text-decoration: underline; }
@@ -39,7 +60,11 @@
   .actions-cell button { padding: 2px 8px; margin-right: 4px; font-size: 12px; border-radius: 3px; cursor: pointer; }
   .btn-edit { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
   .btn-delete { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+
+  /* Count / Status bar */
   .count-bar { font-size: 13px; color: #666; margin-bottom: 8px; }
+
+  /* Modal */
   .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
   .modal-overlay.active { display: flex; }
   .modal { background: #fff; border-radius: 8px; padding: 24px; width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
@@ -48,52 +73,156 @@
   .modal input, .modal textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
   .modal textarea { height: 60px; resize: vertical; }
   .modal-actions { margin-top: 20px; display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* Material detail modal */
+  .modal.wide { max-width: 760px; }
+  .nutrient-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-top: 8px; }
+  .nutrient-item { background: #f7f7f7; border-radius: 4px; padding: 8px; }
+  .nutrient-item .label { font-size: 11px; color: #666; margin-bottom: 2px; }
+  .nutrient-item .value { font-size: 14px; font-weight: 600; color: #2d3748; }
+  .section-title { font-size: 13px; font-weight: 600; color: #555; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
+
+  /* Knowledge cards */
+  .knowledge-grid { display: grid; gap: 12px; }
+  .knowledge-card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .knowledge-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .knowledge-card-title { font-size: 15px; font-weight: 600; color: #1a202c; }
+  .knowledge-card-meta { font-size: 12px; color: #888; white-space: nowrap; }
+  .knowledge-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .knowledge-tag { font-size: 11px; padding: 2px 8px; border-radius: 12px; background: #e6f4ea; color: #276749; }
+  .knowledge-tag.cat { background: #ebf8ff; color: #2b6cb0; }
+  .knowledge-content { font-size: 13px; color: #4a5568; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .knowledge-notes { font-size: 12px; color: #999; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0f0f0; }
+
+  /* Status badge */
+  .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
+  .badge-active { background: #c6f6d5; color: #276749; }
+  .badge-candidate { background: #fefcbf; color: #744210; }
+  .badge-pause { background: #e2e8f0; color: #4a5568; }
+  .badge-end { background: #fed7d7; color: #822727; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 32px; color: #aaa; font-size: 14px; }
   .hidden { display: none; }
 </style>
 </head>
 <body>
 
+<!-- Login Screen -->
 <div id="loginScreen" class="login-container">
-  <h1>メーカーデータベース</h1>
+  <h1>R&D チームHub</h1>
+  <p>原材料・メーカー・ナレッジDB</p>
   <div id="loginError" class="login-error hidden"></div>
   <input type="email" id="loginEmail" placeholder="メールアドレス" value="randd_2foods@two2.jp">
   <input type="password" id="loginPassword" placeholder="パスワード">
   <button onclick="doLogin()">ログイン</button>
 </div>
 
+<!-- Main App -->
 <div id="appScreen" class="hidden">
   <div class="header">
-    <h1>メーカーデータベース</h1>
-    <div>
-      <span id="userEmail" style="font-size:12px;color:#aaa;margin-right:12px;"></span>
+    <div class="header-left">
+      <h1>R&D チームHub</h1>
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('makers')">メーカー連絡先</button>
+        <button class="tab-btn" onclick="switchTab('materials')">原材料検索</button>
+        <button class="tab-btn" onclick="switchTab('factories')">工場一覧</button>
+        <button class="tab-btn" onclick="switchTab('knowledge')">ナレッジDB</button>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userEmail"></span>
       <button onclick="doLogout()">ログアウト</button>
     </div>
   </div>
+
   <div class="main">
-    <div class="toolbar">
-      <input type="text" id="searchInput" placeholder="会社名・担当者名・取扱い原料で検索..." onkeyup="if(event.key==='Enter') doSearch()">
-      <button class="btn btn-secondary" onclick="doSearch()">検索</button>
-      <button class="btn btn-primary" onclick="openAddModal()">+ 新規追加</button>
-    </div>
-    <div class="count-bar" id="countBar"></div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
+
+    <!-- Tab 1: メーカー連絡先 -->
+    <div id="tab-makers" class="tab-panel active">
+      <div class="toolbar">
+        <input type="text" id="makersSearch" placeholder="会社名・担当者名・取扱い原料で検索..." onkeyup="if(event.key==='Enter') fetchMakers()">
+        <button class="btn btn-secondary" onclick="fetchMakers()">検索</button>
+        <button class="btn btn-primary" onclick="openMakerAddModal()">+ 新規追加</button>
+      </div>
+      <div class="count-bar" id="makersCount"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
             <th>企業名</th><th>部署名</th><th>担当者名</th><th>電話</th><th>携帯</th>
             <th>メール</th><th>取扱い原料</th><th>カタログ</th><th>備考</th><th>名刺交換日</th><th>操作</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+          </tr></thead>
+          <tbody id="makersBody"></tbody>
+        </table>
+      </div>
     </div>
+
+    <!-- Tab 2: 原材料検索 -->
+    <div id="tab-materials" class="tab-panel">
+      <div class="toolbar">
+        <input type="text" id="matSearch" placeholder="原材料名・メーカー名で検索..." onkeyup="if(event.key==='Enter') fetchMaterials()">
+        <input type="text" id="matCategory" placeholder="カテゴリ絞り込み" style="max-width:180px;" onkeyup="if(event.key==='Enter') fetchMaterials()">
+        <button class="btn btn-secondary" onclick="fetchMaterials()">検索</button>
+        <button class="btn btn-secondary" onclick="clearMatSearch()">クリア</button>
+      </div>
+      <div class="count-bar" id="matCount"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>コード</th><th>原材料名</th><th>メーカー名</th><th>カテゴリ</th>
+            <th>エネルギー(kcal)</th><th>タンパク質(g)</th><th>脂質(g)</th><th>炭水化物(g)</th>
+            <th>食塩相当量(g)</th><th>アレルゲン(特定8品目)</th><th>単価</th><th>詳細</th>
+          </tr></thead>
+          <tbody id="matBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 3: 工場一覧 -->
+    <div id="tab-factories" class="tab-panel">
+      <div class="toolbar">
+        <input type="text" id="facSearch" placeholder="工場名・カテゴリで検索..." onkeyup="if(event.key==='Enter') fetchFactories()">
+        <select id="facStatus" onchange="fetchFactories()">
+          <option value="">すべて</option>
+          <option value="取引中">取引中</option>
+          <option value="候補">候補</option>
+          <option value="休止">休止</option>
+          <option value="終了">終了</option>
+        </select>
+        <button class="btn btn-secondary" onclick="fetchFactories()">検索</button>
+      </div>
+      <div class="count-bar" id="facCount"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>工場名</th><th>住所</th><th>製造カテゴリ</th>
+            <th>認証</th><th>最小ロット</th><th>リードタイム</th><th>連絡先</th><th>ステータス</th><th>公式サイト</th>
+          </tr></thead>
+          <tbody id="facBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: ナレッジDB -->
+    <div id="tab-knowledge" class="tab-panel">
+      <div class="toolbar">
+        <input type="text" id="knSearch" placeholder="原材料名・メーカー名・キーワードで検索..." onkeyup="if(event.key==='Enter') fetchKnowledge()">
+        <input type="text" id="knCategory" placeholder="カテゴリ絞り込み" style="max-width:180px;" onkeyup="if(event.key==='Enter') fetchKnowledge()">
+        <button class="btn btn-secondary" onclick="fetchKnowledge()">検索</button>
+        <button class="btn btn-secondary" onclick="clearKnSearch()">クリア</button>
+      </div>
+      <div class="count-bar" id="knCount"></div>
+      <div class="knowledge-grid" id="knGrid"></div>
+    </div>
+
   </div>
 </div>
 
-<div class="modal-overlay" id="modal">
+<!-- Maker Add/Edit Modal -->
+<div class="modal-overlay" id="makerModal">
   <div class="modal">
-    <h2 id="modalTitle">新規追加</h2>
-    <input type="hidden" id="editId">
+    <h2 id="makerModalTitle">新規追加</h2>
+    <input type="hidden" id="editMakerId">
     <label>企業名 *</label><input type="text" id="fCompany">
     <label>部署名</label><input type="text" id="fDept">
     <label>担当者名</label><input type="text" id="fPerson">
@@ -105,43 +234,51 @@
     <label>備考</label><textarea id="fNotes"></textarea>
     <label>名刺交換日</label><input type="text" id="fCardDate">
     <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal()">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveRecord()">保存</button>
+      <button class="btn btn-secondary" onclick="closeMakerModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveMaker()">保存</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="deleteModal">
+<!-- Maker Delete Confirm Modal -->
+<div class="modal-overlay" id="makerDeleteModal">
   <div class="modal" style="max-width:400px;">
     <h2>削除確認</h2>
-    <p style="margin:12px 0;" id="deleteMsg"></p>
-    <input type="hidden" id="deleteId">
+    <p style="margin:12px 0;" id="makerDeleteMsg"></p>
+    <input type="hidden" id="deleteMakerId">
     <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeDeleteModal()">キャンセル</button>
-      <button class="btn btn-danger" onclick="confirmDelete()">削除</button>
+      <button class="btn btn-secondary" onclick="closeMakerDeleteModal()">キャンセル</button>
+      <button class="btn btn-danger" onclick="confirmMakerDelete()">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Material Detail Modal -->
+<div class="modal-overlay" id="matDetailModal">
+  <div class="modal wide">
+    <h2 id="matDetailTitle"></h2>
+    <div id="matDetailBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeMatDetail()">閉じる</button>
     </div>
   </div>
 </div>
 
 <script>
-const SUPABASE_URL = 'https://gyoomkdnvafgauohklwn.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5b29ta2RudmFmZ2F1b2hrbHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTczNzUsImV4cCI6MjA4Nzk5MzM3NX0.K3jyJDJD9eqzf62MJLl7ZQ6DpmsvTRZ72OtvAgIB6iA';
+const TWO_URL = 'https://gyoomkdnvafgauohklwn.supabase.co';
+const TWO_KEY = 'sb_publishable_chBiqDGxo2kZXanuvpAsBw_v6nqmrWh';
+const DEV_URL = 'https://pbuifhjjugfgbygjefge.supabase.co';
+const DEV_KEY = 'sb_publishable_Ka2CSbaTv2iWfUpzcuM2jQ_S0AlxKhu';
 
 const { createClient } = window.supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const twoDb = createClient(TWO_URL, TWO_KEY);
+const devDb = createClient(DEV_URL, DEV_KEY);
 
-let totalCount = 0;
-let currentSearch = '';
+const tabLoaded = { makers: false, materials: false, factories: false, knowledge: false };
 
-function cleanNotes(val) {
-  if (!val) return '';
-  const s = String(val).trim();
-  if (s.startsWith('{') && s.endsWith('}')) return '';
-  return s;
-}
-
+// ===== Auth =====
 async function checkSession() {
-  const { data: { session } } = await db.auth.getSession();
+  const { data: { session } } = await twoDb.auth.getSession();
   if (session) showApp(session.user.email);
 }
 
@@ -150,7 +287,7 @@ async function doLogin() {
   const password = document.getElementById('loginPassword').value;
   const errEl = document.getElementById('loginError');
   errEl.classList.add('hidden');
-  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  const { data, error } = await twoDb.auth.signInWithPassword({ email, password });
   if (error) {
     errEl.textContent = 'ログインに失敗しました: ' + error.message;
     errEl.classList.remove('hidden');
@@ -160,86 +297,100 @@ async function doLogin() {
 }
 
 async function doLogout() {
-  await db.auth.signOut();
+  await twoDb.auth.signOut();
   document.getElementById('appScreen').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('loginPassword').value = '';
+  Object.keys(tabLoaded).forEach(k => tabLoaded[k] = false);
 }
 
 function showApp(email) {
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appScreen').classList.remove('hidden');
   document.getElementById('userEmail').textContent = email;
-  doSearch();
+  fetchMakers();
+  tabLoaded.makers = true;
 }
 
-async function doSearch() {
-  currentSearch = document.getElementById('searchInput').value.trim();
-  await fetchData();
+// ===== Tabs =====
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (!tabLoaded[name]) {
+    tabLoaded[name] = true;
+    if (name === 'materials') fetchMaterials();
+    if (name === 'factories') fetchFactories();
+    if (name === 'knowledge') fetchKnowledge();
+  }
 }
 
-async function fetchData() {
+// ===== Escape =====
+function esc(val) {
+  if (val == null) return '';
+  return String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ===== Tab 1: メーカー連絡先 =====
+let makersTotalCount = 0;
+
+async function fetchMakers() {
+  const search = document.getElementById('makersSearch').value.trim();
   let allData = [];
   let from = 0;
   const batchSize = 1000;
   while (true) {
-    let query = db.from('manufacturers').select('*', { count: 'exact' }).order('manufacturer_name').range(from, from + batchSize - 1);
-    if (currentSearch) {
-      query = query.or(`manufacturer_name.ilike.%${currentSearch}%,contact_person.ilike.%${currentSearch}%,products.ilike.%${currentSearch}%`);
-    }
-    const { data, count, error } = await query;
-    if (error) { alert('データ取得エラー: ' + error.message); return; }
-    if (from === 0) totalCount = count || 0;
+    let q = twoDb.from('manufacturers').select('*', { count: 'exact' })
+      .order('manufacturer_name').order('department').range(from, from + batchSize - 1);
+    if (search) q = q.or(`manufacturer_name.ilike.%${search}%,contact_person.ilike.%${search}%,products.ilike.%${search}%`);
+    const { data, count, error } = await q;
+    if (error) { alert('取得エラー: ' + error.message); return; }
+    if (from === 0) makersTotalCount = count || 0;
     allData = allData.concat(data || []);
     if (!data || data.length < batchSize) break;
     from += batchSize;
   }
-  renderTable(allData);
+  renderMakers(allData);
 }
 
-function renderTable(rows) {
-  const tbody = document.getElementById('tableBody');
-  if (!rows || rows.length === 0) {
+function renderMakers(rows) {
+  const tbody = document.getElementById('makersBody');
+  document.getElementById('makersCount').textContent = `${makersTotalCount} 件`;
+  if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:#999;">データがありません</td></tr>';
-    document.getElementById('countBar').textContent = '';
     return;
   }
-  document.getElementById('countBar').textContent = `${totalCount} 件`;
   tbody.innerHTML = rows.map(r => `<tr>
     <td title="${esc(r.manufacturer_name)}">${esc(r.manufacturer_name)}</td>
     <td title="${esc(r.department)}">${esc(r.department)}</td>
     <td title="${esc(r.contact_person)}">${esc(r.contact_person)}</td>
     <td>${esc(r.phone)}</td>
     <td>${esc(r.mobile)}</td>
-    <td>${r.email ? '<a href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a>' : ''}</td>
+    <td>${r.email ? '<a href="mailto:'+esc(r.email)+'">'+esc(r.email)+'</a>' : ''}</td>
     <td title="${esc(r.products)}">${esc(r.products)}</td>
-    <td>${r.catalog_url ? '<a href="' + esc(r.catalog_url) + '" target="_blank">リンク</a>' : ''}</td>
-    <td title="${esc(cleanNotes(r.notes))}">${esc(cleanNotes(r.notes))}</td>
+    <td>${r.catalog_url ? '<a href="'+esc(r.catalog_url)+'" target="_blank">リンク</a>' : ''}</td>
+    <td title="${esc(r.notes)}">${esc(r.notes)}</td>
     <td>${esc(r.card_exchange_date)}</td>
     <td class="actions-cell">
-      <button class="btn-edit" onclick="openEditModal('${r.id}')">編集</button>
-      <button class="btn-delete" onclick="openDeleteModal('${r.id}', '${esc(r.manufacturer_name)} - ${esc(r.contact_person)}')">削除</button>
+      <button class="btn-edit" onclick="openMakerEditModal(${r.id})">編集</button>
+      <button class="btn-delete" onclick="openMakerDeleteModal(${r.id},'${esc(r.manufacturer_name)} - ${esc(r.contact_person)}')">削除</button>
     </td>
   </tr>`).join('');
 }
 
-function esc(val) {
-  if (!val) return '';
-  return String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function openMakerAddModal() {
+  document.getElementById('makerModalTitle').textContent = '新規追加';
+  document.getElementById('editMakerId').value = '';
+  ['fCompany','fDept','fPerson','fPhone','fMobile','fEmail','fProducts','fCatalog','fNotes','fCardDate'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('makerModal').classList.add('active');
 }
 
-function openAddModal() {
-  document.getElementById('modalTitle').textContent = '新規追加';
-  document.getElementById('editId').value = '';
-  clearForm();
-  document.getElementById('modal').classList.add('active');
-}
-
-async function openEditModal(id) {
-  const { data, error } = await db.from('manufacturers').select('*').eq('id', id).single();
-  if (error || !data) { alert('データ取得エラー'); return; }
-  document.getElementById('modalTitle').textContent = '編集';
-  document.getElementById('editId').value = data.id;
+async function openMakerEditModal(id) {
+  const { data, error } = await twoDb.from('manufacturers').select('*').eq('id', id).single();
+  if (error || !data) { alert('取得エラー'); return; }
+  document.getElementById('makerModalTitle').textContent = '編集';
+  document.getElementById('editMakerId').value = data.id;
   document.getElementById('fCompany').value = data.manufacturer_name || '';
   document.getElementById('fDept').value = data.department || '';
   document.getElementById('fPerson').value = data.contact_person || '';
@@ -248,20 +399,14 @@ async function openEditModal(id) {
   document.getElementById('fEmail').value = data.email || '';
   document.getElementById('fProducts').value = data.products || '';
   document.getElementById('fCatalog').value = data.catalog_url || '';
-  document.getElementById('fNotes').value = cleanNotes(data.notes) || '';
+  document.getElementById('fNotes').value = data.notes || '';
   document.getElementById('fCardDate').value = data.card_exchange_date || '';
-  document.getElementById('modal').classList.add('active');
+  document.getElementById('makerModal').classList.add('active');
 }
 
-function closeModal() { document.getElementById('modal').classList.remove('active'); }
+function closeMakerModal() { document.getElementById('makerModal').classList.remove('active'); }
 
-function clearForm() {
-  ['fCompany','fDept','fPerson','fPhone','fMobile','fEmail','fProducts','fCatalog','fNotes','fCardDate'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-}
-
-async function saveRecord() {
+async function saveMaker() {
   const company = document.getElementById('fCompany').value.trim();
   if (!company) { alert('企業名は必須です'); return; }
   const record = {
@@ -276,34 +421,233 @@ async function saveRecord() {
     notes: document.getElementById('fNotes').value.trim() || null,
     card_exchange_date: document.getElementById('fCardDate').value.trim() || null,
   };
-  const editId = document.getElementById('editId').value;
-  let error;
-  if (editId) {
-    ({ error } = await db.from('manufacturers').update(record).eq('id', editId));
-  } else {
-    ({ error } = await db.from('manufacturers').insert(record));
-  }
+  const editId = document.getElementById('editMakerId').value;
+  const { error } = editId
+    ? await twoDb.from('manufacturers').update(record).eq('id', editId)
+    : await twoDb.from('manufacturers').insert(record);
   if (error) { alert('保存エラー: ' + error.message); return; }
-  closeModal();
-  fetchData();
+  closeMakerModal();
+  fetchMakers();
 }
 
-function openDeleteModal(id, name) {
-  document.getElementById('deleteId').value = id;
-  document.getElementById('deleteMsg').textContent = `「${name}」を削除しますか？`;
-  document.getElementById('deleteModal').classList.add('active');
+function openMakerDeleteModal(id, name) {
+  document.getElementById('deleteMakerId').value = id;
+  document.getElementById('makerDeleteMsg').textContent = `「${name}」を削除しますか？`;
+  document.getElementById('makerDeleteModal').classList.add('active');
 }
 
-function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('active'); }
+function closeMakerDeleteModal() { document.getElementById('makerDeleteModal').classList.remove('active'); }
 
-async function confirmDelete() {
-  const id = document.getElementById('deleteId').value;
-  const { error } = await db.from('manufacturers').delete().eq('id', id);
+async function confirmMakerDelete() {
+  const id = document.getElementById('deleteMakerId').value;
+  const { error } = await twoDb.from('manufacturers').delete().eq('id', id);
   if (error) { alert('削除エラー: ' + error.message); return; }
-  closeDeleteModal();
-  fetchData();
+  closeMakerDeleteModal();
+  fetchMakers();
 }
 
+// ===== Tab 2: 原材料検索 =====
+let matAllData = [];
+
+async function fetchMaterials() {
+  const search = document.getElementById('matSearch').value.trim();
+  const category = document.getElementById('matCategory').value.trim();
+  document.getElementById('matBody').innerHTML = '<tr><td colspan="12" class="loading">読み込み中...</td></tr>';
+  let allData = [];
+  let from = 0;
+  const batchSize = 1000;
+  while (true) {
+    let q = twoDb.from('materials')
+      .select('material_code,material_name,manufacturer_name,category,energy_kcal,protein_g,fat_g,carbohydrate_g,sugar_g,dietary_fiber_g,salt_equivalent_g,sodium_mg,vitamin_a_ug,vitamin_b1_mg,vitamin_b2_mg,vitamin_b6_mg,vitamin_b12_ug,vitamin_c_mg,vitamin_d_ug,vitamin_e_mg,niacin_mg,folic_acid_ug,pantothenic_acid_mg,calcium_mg,iron_mg,zinc_mg,magnesium_mg,potassium_mg,phosphorus_mg,copper_mg,allergen_major,allergen_minor,unit_price,unit,min_order_qty,shelf_life,storage_condition,additive_name,notes', { count: 'exact' })
+      .order('material_name')
+      .range(from, from + batchSize - 1);
+    if (search) q = q.or(`material_name.ilike.%${search}%,manufacturer_name.ilike.%${search}%`);
+    if (category) q = q.ilike('category', `%${category}%`);
+    const { data, count, error } = await q;
+    if (error) { alert('取得エラー: ' + error.message); return; }
+    if (from === 0) document.getElementById('matCount').textContent = `${count || 0} 件`;
+    allData = allData.concat(data || []);
+    if (!data || data.length < batchSize) break;
+    from += batchSize;
+  }
+  matAllData = allData;
+  renderMaterials(allData);
+}
+
+function renderMaterials(rows) {
+  const tbody = document.getElementById('matBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:24px;color:#999;">データがありません</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map((r, i) => `<tr>
+    <td>${esc(r.material_code)}</td>
+    <td title="${esc(r.material_name)}" style="font-weight:500;">${esc(r.material_name)}</td>
+    <td title="${esc(r.manufacturer_name)}">${esc(r.manufacturer_name)}</td>
+    <td>${esc(r.category)}</td>
+    <td style="text-align:right;">${r.energy_kcal != null ? r.energy_kcal : ''}</td>
+    <td style="text-align:right;">${r.protein_g != null ? r.protein_g : ''}</td>
+    <td style="text-align:right;">${r.fat_g != null ? r.fat_g : ''}</td>
+    <td style="text-align:right;">${r.carbohydrate_g != null ? r.carbohydrate_g : ''}</td>
+    <td style="text-align:right;">${r.salt_equivalent_g != null ? r.salt_equivalent_g : ''}</td>
+    <td title="${esc(r.allergen_major)}">${esc(r.allergen_major)}</td>
+    <td style="text-align:right;">${r.unit_price != null ? r.unit_price.toLocaleString() + '円/' + esc(r.unit) : ''}</td>
+    <td><button class="btn-edit" onclick="openMatDetail(${i})">詳細</button></td>
+  </tr>`).join('');
+}
+
+function clearMatSearch() {
+  document.getElementById('matSearch').value = '';
+  document.getElementById('matCategory').value = '';
+  fetchMaterials();
+}
+
+function openMatDetail(idx) {
+  const r = matAllData[idx];
+  document.getElementById('matDetailTitle').textContent = r.material_name + (r.material_code ? ' (' + r.material_code + ')' : '');
+  const fmt = (v, unit='') => v != null ? v + unit : '-';
+  document.getElementById('matDetailBody').innerHTML = `
+    <div style="font-size:13px;color:#555;margin-bottom:4px;">${esc(r.manufacturer_name)} / ${esc(r.category)}</div>
+    ${r.allergen_major ? '<div style="font-size:12px;background:#fff5f5;color:#c53030;padding:6px 10px;border-radius:4px;margin-bottom:8px;">アレルゲン: ' + esc(r.allergen_major) + (r.allergen_minor ? ' / 準特定: ' + esc(r.allergen_minor) : '') + '</div>' : ''}
+
+    <div class="section-title">基本栄養素（100gあたり）</div>
+    <div class="nutrient-grid">
+      <div class="nutrient-item"><div class="label">エネルギー</div><div class="value">${fmt(r.energy_kcal,'kcal')}</div></div>
+      <div class="nutrient-item"><div class="label">タンパク質</div><div class="value">${fmt(r.protein_g,'g')}</div></div>
+      <div class="nutrient-item"><div class="label">脂質</div><div class="value">${fmt(r.fat_g,'g')}</div></div>
+      <div class="nutrient-item"><div class="label">炭水化物</div><div class="value">${fmt(r.carbohydrate_g,'g')}</div></div>
+      <div class="nutrient-item"><div class="label">糖質</div><div class="value">${fmt(r.sugar_g,'g')}</div></div>
+      <div class="nutrient-item"><div class="label">食物繊維</div><div class="value">${fmt(r.dietary_fiber_g,'g')}</div></div>
+      <div class="nutrient-item"><div class="label">食塩相当量</div><div class="value">${fmt(r.salt_equivalent_g,'g')}</div></div>
+      <div class="nutrient-item"><div class="label">ナトリウム</div><div class="value">${fmt(r.sodium_mg,'mg')}</div></div>
+    </div>
+
+    ${(r.vitamin_a_ug != null || r.vitamin_c_mg != null || r.calcium_mg != null) ? `
+    <div class="section-title">微量栄養素</div>
+    <div class="nutrient-grid">
+      ${r.vitamin_a_ug != null ? '<div class="nutrient-item"><div class="label">ビタミンA</div><div class="value">'+r.vitamin_a_ug+'μg</div></div>' : ''}
+      ${r.vitamin_b1_mg != null ? '<div class="nutrient-item"><div class="label">ビタミンB1</div><div class="value">'+r.vitamin_b1_mg+'mg</div></div>' : ''}
+      ${r.vitamin_b2_mg != null ? '<div class="nutrient-item"><div class="label">ビタミンB2</div><div class="value">'+r.vitamin_b2_mg+'mg</div></div>' : ''}
+      ${r.vitamin_b6_mg != null ? '<div class="nutrient-item"><div class="label">ビタミンB6</div><div class="value">'+r.vitamin_b6_mg+'mg</div></div>' : ''}
+      ${r.vitamin_b12_ug != null ? '<div class="nutrient-item"><div class="label">ビタミンB12</div><div class="value">'+r.vitamin_b12_ug+'μg</div></div>' : ''}
+      ${r.vitamin_c_mg != null ? '<div class="nutrient-item"><div class="label">ビタミンC</div><div class="value">'+r.vitamin_c_mg+'mg</div></div>' : ''}
+      ${r.vitamin_d_ug != null ? '<div class="nutrient-item"><div class="label">ビタミンD</div><div class="value">'+r.vitamin_d_ug+'μg</div></div>' : ''}
+      ${r.vitamin_e_mg != null ? '<div class="nutrient-item"><div class="label">ビタミンE</div><div class="value">'+r.vitamin_e_mg+'mg</div></div>' : ''}
+      ${r.niacin_mg != null ? '<div class="nutrient-item"><div class="label">ナイアシン</div><div class="value">'+r.niacin_mg+'mg</div></div>' : ''}
+      ${r.folic_acid_ug != null ? '<div class="nutrient-item"><div class="label">葉酸</div><div class="value">'+r.folic_acid_ug+'μg</div></div>' : ''}
+      ${r.pantothenic_acid_mg != null ? '<div class="nutrient-item"><div class="label">パントテン酸</div><div class="value">'+r.pantothenic_acid_mg+'mg</div></div>' : ''}
+      ${r.calcium_mg != null ? '<div class="nutrient-item"><div class="label">カルシウム</div><div class="value">'+r.calcium_mg+'mg</div></div>' : ''}
+      ${r.iron_mg != null ? '<div class="nutrient-item"><div class="label">鉄</div><div class="value">'+r.iron_mg+'mg</div></div>' : ''}
+      ${r.zinc_mg != null ? '<div class="nutrient-item"><div class="label">亜鉛</div><div class="value">'+r.zinc_mg+'mg</div></div>' : ''}
+      ${r.magnesium_mg != null ? '<div class="nutrient-item"><div class="label">マグネシウム</div><div class="value">'+r.magnesium_mg+'mg</div></div>' : ''}
+      ${r.potassium_mg != null ? '<div class="nutrient-item"><div class="label">カリウム</div><div class="value">'+r.potassium_mg+'mg</div></div>' : ''}
+      ${r.phosphorus_mg != null ? '<div class="nutrient-item"><div class="label">リン</div><div class="value">'+r.phosphorus_mg+'mg</div></div>' : ''}
+      ${r.copper_mg != null ? '<div class="nutrient-item"><div class="label">銅</div><div class="value">'+r.copper_mg+'mg</div></div>' : ''}
+    </div>` : ''}
+
+    <div class="section-title">商品情報・取引</div>
+    <div style="font-size:13px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div><span style="color:#888;">賞味期限: </span>${esc(r.shelf_life) || '-'}</div>
+      <div><span style="color:#888;">保存条件: </span>${esc(r.storage_condition) || '-'}</div>
+      <div><span style="color:#888;">単価: </span>${r.unit_price != null ? r.unit_price.toLocaleString()+'円/'+esc(r.unit) : '-'}</div>
+      <div><span style="color:#888;">最小発注: </span>${esc(r.min_order_qty) || '-'}</div>
+      ${r.additive_name ? '<div style="grid-column:1/-1;"><span style="color:#888;">添加物: </span>'+esc(r.additive_name)+'</div>' : ''}
+      ${r.notes ? '<div style="grid-column:1/-1;"><span style="color:#888;">備考: </span>'+esc(r.notes)+'</div>' : ''}
+    </div>
+  `;
+  document.getElementById('matDetailModal').classList.add('active');
+}
+
+function closeMatDetail() { document.getElementById('matDetailModal').classList.remove('active'); }
+
+// ===== Tab 3: 工場一覧 =====
+async function fetchFactories() {
+  const search = document.getElementById('facSearch').value.trim();
+  const status = document.getElementById('facStatus').value;
+  document.getElementById('facBody').innerHTML = '<tr><td colspan="10" class="loading">読み込み中...</td></tr>';
+  let q = twoDb.from('factories').select('*', { count: 'exact' }).order('name');
+  if (search) q = q.or(`name.ilike.%${search}%,notes.ilike.%${search}%`);
+  if (status) q = q.eq('status', status);
+  const { data, count, error } = await q;
+  if (error) {
+    document.getElementById('facBody').innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#e53e3e;">取得エラー: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  document.getElementById('facCount').textContent = `${count || 0} 件`;
+  renderFactories(data || []);
+}
+
+function renderFactories(rows) {
+  const tbody = document.getElementById('facBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#999;">データがありません</td></tr>';
+    return;
+  }
+  const statusBadge = s => {
+    if (!s) return '';
+    const cls = s==='取引中'?'badge-active':s==='候補'?'badge-candidate':s==='休止'?'badge-pause':'badge-end';
+    return `<span class="badge ${cls}">${esc(s)}</span>`;
+  };
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td>${esc(r.id)}</td>
+    <td style="font-weight:500;" title="${esc(r.name)}">${esc(r.name)}</td>
+    <td title="${esc(r.address)}">${esc(r.address)}</td>
+    <td title="${Array.isArray(r.product_categories)?r.product_categories.join('、'):esc(r.product_categories)}">${Array.isArray(r.product_categories)?r.product_categories.join('、'):esc(r.product_categories)}</td>
+    <td title="${Array.isArray(r.certifications)?r.certifications.join('、'):esc(r.certifications)}">${Array.isArray(r.certifications)?r.certifications.join('、'):esc(r.certifications)}</td>
+    <td>${esc(r.min_lot)}</td>
+    <td>${esc(r.lead_time)}</td>
+    <td title="${esc(r.contact)}">${esc(r.contact)}</td>
+    <td>${statusBadge(r.status)}</td>
+    <td>${r.website_url ? '<a href="'+esc(r.website_url)+'" target="_blank">サイト</a>' : ''}</td>
+  </tr>`).join('');
+}
+
+// ===== Tab 4: ナレッジDB =====
+async function fetchKnowledge() {
+  const search = document.getElementById('knSearch').value.trim();
+  const category = document.getElementById('knCategory').value.trim();
+  document.getElementById('knGrid').innerHTML = '<div class="loading">読み込み中...</div>';
+  let q = devDb.from('原材料ナレッジ').select('*', { count: 'exact' }).order('記録日', { ascending: false });
+  if (search) q = q.or(`原材料名.ilike.%${search}%,メーカー名.ilike.%${search}%,内容.ilike.%${search}%`);
+  if (category) q = q.ilike('カテゴリ', `%${category}%`);
+  const { data, count, error } = await q;
+  if (error) {
+    document.getElementById('knGrid').innerHTML = '<div style="color:#e53e3e;padding:24px;">取得エラー: ' + esc(error.message) + '</div>';
+    return;
+  }
+  document.getElementById('knCount').textContent = `${count || 0} 件`;
+  renderKnowledge(data || []);
+}
+
+function renderKnowledge(rows) {
+  const grid = document.getElementById('knGrid');
+  if (!rows.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:32px;color:#999;">データがありません</div>';
+    return;
+  }
+  grid.innerHTML = rows.map(r => `
+    <div class="knowledge-card">
+      <div class="knowledge-card-header">
+        <div>
+          <div class="knowledge-card-title">${esc(r['原材料名'])}</div>
+          <div style="font-size:12px;color:#666;margin-top:2px;">${esc(r['メーカー名'])}</div>
+        </div>
+        <div class="knowledge-card-meta">${esc(r['記録日'])} / ${esc(r['記録者'])}</div>
+      </div>
+      ${r['カテゴリ'] ? '<div class="knowledge-tags"><span class="knowledge-tag cat">'+esc(r['カテゴリ'])+'</span></div>' : ''}
+      <div class="knowledge-content">${esc(r['内容'])}</div>
+      ${r['備考'] ? '<div class="knowledge-notes">備考: '+esc(r['備考'])+'</div>' : ''}
+    </div>
+  `).join('');
+}
+
+function clearKnSearch() {
+  document.getElementById('knSearch').value = '';
+  document.getElementById('knCategory').value = '';
+  fetchKnowledge();
+}
+
+// Init
 checkSession();
 </script>
 </body>
