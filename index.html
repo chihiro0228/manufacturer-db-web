@@ -195,8 +195,8 @@
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>ID</th><th>工場名</th><th>住所</th><th>製造カテゴリ</th>
-            <th>認証</th><th>最小ロット</th><th>リードタイム</th><th>連絡先</th><th>ステータス</th><th>公式サイト</th>
+            <th>コード</th><th>工場名</th><th>会社名</th><th>カテゴリ</th>
+            <th>認証</th><th>担当者</th><th>OEM</th><th>ステータス</th><th>備考</th><th>公式サイト</th>
           </tr></thead>
           <tbody id="facBody"></tbody>
         </table>
@@ -565,8 +565,10 @@ async function fetchFactories() {
   const search = document.getElementById('facSearch').value.trim();
   const status = document.getElementById('facStatus').value;
   document.getElementById('facBody').innerHTML = '<tr><td colspan="10" class="loading">読み込み中...</td></tr>';
-  let q = twoDb.from('factories').select('*', { count: 'exact' }).order('name');
-  if (search) q = q.or(`name.ilike.%${search}%,notes.ilike.%${search}%`);
+  let q = twoDb.from('factories')
+    .select('factory_code,factory_name,company_name,categories,certifications,contact_person,oem_availability,status,notes,website_url,specialties', { count: 'exact' })
+    .order('factory_code');
+  if (search) q = q.or(`factory_name.ilike.%${search}%,company_name.ilike.%${search}%,notes.ilike.%${search}%`);
   if (status) q = q.eq('status', status);
   const { data, count, error } = await q;
   if (error) {
@@ -588,16 +590,17 @@ function renderFactories(rows) {
     const cls = s==='取引中'?'badge-active':s==='候補'?'badge-candidate':s==='休止'?'badge-pause':'badge-end';
     return `<span class="badge ${cls}">${esc(s)}</span>`;
   };
+  const arrJoin = v => Array.isArray(v) ? v.join('、') : (v || '');
   tbody.innerHTML = rows.map(r => `<tr>
-    <td>${esc(r.id)}</td>
-    <td style="font-weight:500;" title="${esc(r.name)}">${esc(r.name)}</td>
-    <td title="${esc(r.address)}">${esc(r.address)}</td>
-    <td title="${Array.isArray(r.product_categories)?r.product_categories.join('、'):esc(r.product_categories)}">${Array.isArray(r.product_categories)?r.product_categories.join('、'):esc(r.product_categories)}</td>
-    <td title="${Array.isArray(r.certifications)?r.certifications.join('、'):esc(r.certifications)}">${Array.isArray(r.certifications)?r.certifications.join('、'):esc(r.certifications)}</td>
-    <td>${esc(r.min_lot)}</td>
-    <td>${esc(r.lead_time)}</td>
-    <td title="${esc(r.contact)}">${esc(r.contact)}</td>
+    <td>${esc(r.factory_code)}</td>
+    <td style="font-weight:500;" title="${esc(r.factory_name)}">${esc(r.factory_name)}</td>
+    <td title="${esc(r.company_name)}">${esc(r.company_name)}</td>
+    <td title="${esc(arrJoin(r.categories))}">${esc(arrJoin(r.categories))}</td>
+    <td title="${esc(arrJoin(r.certifications))}">${esc(arrJoin(r.certifications))}</td>
+    <td>${esc(r.contact_person)}</td>
+    <td>${esc(r.oem_availability)}</td>
     <td>${statusBadge(r.status)}</td>
+    <td title="${esc(r.notes)}">${esc(r.notes)}</td>
     <td>${r.website_url ? '<a href="'+esc(r.website_url)+'" target="_blank">サイト</a>' : ''}</td>
   </tr>`).join('');
 }
