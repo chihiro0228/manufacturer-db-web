@@ -93,6 +93,7 @@
   .knowledge-tag.cat { background: #ebf8ff; color: #2b6cb0; }
   .knowledge-content { font-size: 13px; color: #4a5568; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
   .knowledge-notes { font-size: 12px; color: #999; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0f0f0; }
+  .knowledge-card-actions { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f0f0f0; display: flex; gap: 6px; justify-content: flex-end; }
 
   /* Status badge */
   .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
@@ -249,6 +250,38 @@
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeMakerDeleteModal()">キャンセル</button>
       <button class="btn btn-danger" onclick="confirmMakerDelete()">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Knowledge Edit Modal -->
+<div class="modal-overlay" id="knowledgeModal">
+  <div class="modal">
+    <h2 id="knowledgeModalTitle">ナレッジ編集</h2>
+    <input type="hidden" id="editKnId">
+    <label>原材料名 *</label><input type="text" id="fKnMaterial">
+    <label>メーカー名</label><input type="text" id="fKnMaker">
+    <label>カテゴリ</label><input type="text" id="fKnCategory">
+    <label>内容 *</label><textarea id="fKnContent" style="height:120px;"></textarea>
+    <label>備考</label><textarea id="fKnNotes"></textarea>
+    <label>記録日</label><input type="date" id="fKnDate">
+    <label>記録者</label><input type="text" id="fKnAuthor">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeKnowledgeModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveKnowledge()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Knowledge Delete Confirm Modal -->
+<div class="modal-overlay" id="knDeleteModal">
+  <div class="modal" style="max-width:400px;">
+    <h2>削除確認</h2>
+    <p style="margin:12px 0;" id="knDeleteMsg"></p>
+    <input type="hidden" id="deleteKnId">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeKnDeleteModal()">キャンセル</button>
+      <button class="btn btn-danger" onclick="confirmKnDelete()">削除</button>
     </div>
   </div>
 </div>
@@ -640,8 +673,66 @@ function renderKnowledge(rows) {
       ${r['カテゴリ'] ? '<div class="knowledge-tags"><span class="knowledge-tag cat">'+esc(r['カテゴリ'])+'</span></div>' : ''}
       <div class="knowledge-content">${esc(r['内容'])}</div>
       ${r['備考'] ? '<div class="knowledge-notes">備考: '+esc(r['備考'])+'</div>' : ''}
+      <div class="knowledge-card-actions">
+        <button class="btn-edit kn-edit-btn" data-id="${esc(r.id)}">編集</button>
+        <button class="btn-delete kn-delete-btn" data-id="${esc(r.id)}" data-name="${esc(r['原材料名'])}">削除</button>
+      </div>
     </div>
   `).join('');
+}
+
+async function openKnowledgeEditModal(id) {
+  const { data, error } = await devDb.from('material_knowledge').select('*').eq('id', id).single();
+  if (error || !data) { alert('取得エラー'); return; }
+  document.getElementById('knowledgeModalTitle').textContent = 'ナレッジ編集';
+  document.getElementById('editKnId').value = data.id;
+  document.getElementById('fKnMaterial').value = data['原材料名'] || '';
+  document.getElementById('fKnMaker').value = data['メーカー名'] || '';
+  document.getElementById('fKnCategory').value = data['カテゴリ'] || '';
+  document.getElementById('fKnContent').value = data['内容'] || '';
+  document.getElementById('fKnNotes').value = data['備考'] || '';
+  document.getElementById('fKnDate').value = data['記録日'] || '';
+  document.getElementById('fKnAuthor').value = data['記録者'] || '';
+  document.getElementById('knowledgeModal').classList.add('active');
+}
+
+function closeKnowledgeModal() { document.getElementById('knowledgeModal').classList.remove('active'); }
+
+async function saveKnowledge() {
+  const material = document.getElementById('fKnMaterial').value.trim();
+  const content = document.getElementById('fKnContent').value.trim();
+  if (!material) { alert('原材料名は必須です'); return; }
+  if (!content) { alert('内容は必須です'); return; }
+  const record = {
+    '原材料名': material,
+    'メーカー名': document.getElementById('fKnMaker').value.trim() || null,
+    'カテゴリ': document.getElementById('fKnCategory').value.trim() || null,
+    '内容': content,
+    '備考': document.getElementById('fKnNotes').value.trim() || null,
+    '記録日': document.getElementById('fKnDate').value || null,
+    '記録者': document.getElementById('fKnAuthor').value.trim() || null,
+  };
+  const editId = document.getElementById('editKnId').value;
+  const { error } = await devDb.from('material_knowledge').update(record).eq('id', editId);
+  if (error) { alert('保存エラー: ' + error.message); return; }
+  closeKnowledgeModal();
+  fetchKnowledge();
+}
+
+function openKnDeleteModal(id, name) {
+  document.getElementById('deleteKnId').value = id;
+  document.getElementById('knDeleteMsg').textContent = `「${name}」のナレッジを削除しますか？`;
+  document.getElementById('knDeleteModal').classList.add('active');
+}
+
+function closeKnDeleteModal() { document.getElementById('knDeleteModal').classList.remove('active'); }
+
+async function confirmKnDelete() {
+  const id = document.getElementById('deleteKnId').value;
+  const { error } = await devDb.from('material_knowledge').delete().eq('id', id);
+  if (error) { alert('削除エラー: ' + error.message); return; }
+  closeKnDeleteModal();
+  fetchKnowledge();
 }
 
 function clearKnSearch() {
@@ -656,6 +747,14 @@ document.getElementById('makersBody').addEventListener('click', e => {
   if (!btn) return;
   if (btn.classList.contains('btn-edit')) openMakerEditModal(btn.dataset.id);
   if (btn.classList.contains('btn-delete')) openMakerDeleteModal(btn.dataset.id, btn.dataset.name);
+});
+
+// Event delegation for knowledge grid
+document.getElementById('knGrid').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  if (btn.classList.contains('kn-edit-btn')) openKnowledgeEditModal(btn.dataset.id);
+  if (btn.classList.contains('kn-delete-btn')) openKnDeleteModal(btn.dataset.id, btn.dataset.name);
 });
 
 // Init
