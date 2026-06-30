@@ -100,6 +100,9 @@
   .notes-btn:hover { background: #f7fafc; border-color: #cbd5e0; }
   .lot-val { font-size: 12px; color: #2d3748; white-space: nowrap; }
 
+  /* Popover */
+  .popover { position: fixed; background: #fff; border: 1px solid #cbd5e0; border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); padding: 10px 14px; max-width: 380px; font-size: 12px; line-height: 1.7; color: #333; white-space: pre-wrap; word-break: break-word; z-index: 300; pointer-events: none; display: none; }
+
   /* Status badge */
   .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
   .badge-active { background: #c6f6d5; color: #276749; }
@@ -667,23 +670,24 @@ function renderFactories(rows) {
   tbody.innerHTML = rows.map(r => {
     const p = parseFactoryNotes(r.notes);
     const notesLabel = r.notes ? r.notes.replace(/\n/g, ' ').substring(0, 30) + (r.notes.length > 30 ? '…' : '') : '';
+    const pop = (t) => t ? `onmouseenter="showPopover(${JSON.stringify(t)})" onmouseleave="hidePopover()"` : '';
     const notesCell = r.notes
-      ? `<button class="notes-btn" onclick="openFacNotesModal(${JSON.stringify(esc(r.factory_name))},${JSON.stringify(r.notes)})" title="${esc(r.notes)}">${esc(notesLabel)}</button>`
+      ? `<button class="notes-btn" onclick="openFacNotesModal(${JSON.stringify(esc(r.factory_name))},${JSON.stringify(r.notes)})" ${pop(r.notes)}>詳細</button>`
       : '';
     return `<tr>
     <td>${esc(r.factory_code)}</td>
-    <td style="font-weight:500;" title="${esc(r.factory_name)}">${esc(r.factory_name)}</td>
-    <td title="${esc(arrJoin(r.categories))}">${esc(arrJoin(r.categories))}</td>
-    <td title="${esc(arrJoin(r.certifications))}">${esc(arrJoin(r.certifications))}</td>
-    <td>${esc(r.contact_person)}</td>
+    <td style="font-weight:500;" ${pop(r.factory_name)}>${esc(r.factory_name)}</td>
+    <td ${pop(arrJoin(r.categories))}>${esc(arrJoin(r.categories))}</td>
+    <td ${pop(arrJoin(r.certifications))}>${esc(arrJoin(r.certifications))}</td>
+    <td ${pop(r.contact_person)}>${esc(r.contact_person)}</td>
     <td>${statusBadge(r.status)}</td>
-    <td class="lot-val">${esc(p.minLot)}</td>
-    <td class="lot-val">${esc(p.econLot)}</td>
-    <td class="lot-val">${esc(p.leadTime)}</td>
-    <td class="lot-val">${esc(p.price)}</td>
-    <td class="lot-val">${esc(p.shelfLife)}</td>
-    <td class="lot-val" style="color:#c53030;">${esc(p.ngReason)}</td>
-    <td class="lot-val">${esc(p.delivery)}</td>
+    <td class="lot-val" ${pop(p.minLot)}>${esc(p.minLot)}</td>
+    <td class="lot-val" ${pop(p.econLot)}>${esc(p.econLot)}</td>
+    <td class="lot-val" ${pop(p.leadTime)}>${esc(p.leadTime)}</td>
+    <td class="lot-val" ${pop(p.price)}>${esc(p.price)}</td>
+    <td class="lot-val" ${pop(p.shelfLife)}>${esc(p.shelfLife)}</td>
+    <td class="lot-val" style="color:#c53030;" ${pop(p.ngReason)}>${esc(p.ngReason)}</td>
+    <td class="lot-val" ${pop(p.delivery)}>${esc(p.delivery)}</td>
     <td style="white-space:nowrap;color:#888;font-size:12px;">${r.updated_at ? r.updated_at.substring(0,10).replace(/-/g,'/') : ''}</td>
     <td style="max-width:180px;">${notesCell}</td>
     <td>${r.website_url ? '<a href="'+esc(r.website_url)+'" target="_blank">サイト</a>' : ''}</td>
@@ -812,6 +816,27 @@ document.getElementById('knGrid').addEventListener('click', e => {
 
 // Init
 checkSession();
+
+// ===== Popover =====
+const _popover = document.createElement('div');
+_popover.className = 'popover';
+document.body.appendChild(_popover);
+
+document.addEventListener('mousemove', e => {
+  if (_popover.style.display === 'none') return;
+  let x = e.clientX + 18, y = e.clientY + 10;
+  if (x + 400 > window.innerWidth)  x = e.clientX - 400;
+  if (y + _popover.offsetHeight + 10 > window.innerHeight) y = e.clientY - _popover.offsetHeight - 10;
+  _popover.style.left = x + 'px';
+  _popover.style.top  = y + 'px';
+});
+
+function showPopover(text) {
+  if (!text) return;
+  _popover.textContent = text;
+  _popover.style.display = 'block';
+}
+function hidePopover() { _popover.style.display = 'none'; }
 </script>
 </body>
 </html>
