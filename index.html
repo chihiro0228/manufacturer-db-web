@@ -95,6 +95,11 @@
   .knowledge-notes { font-size: 12px; color: #999; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0f0f0; }
   .knowledge-card-actions { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f0f0f0; display: flex; gap: 6px; justify-content: flex-end; }
 
+  /* Factory notes popup */
+  .notes-btn { background: none; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 3px; font-size: 11px; cursor: pointer; color: #555; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
+  .notes-btn:hover { background: #f7fafc; border-color: #cbd5e0; }
+  .lot-val { font-size: 12px; color: #2d3748; white-space: nowrap; }
+
   /* Status badge */
   .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
   .badge-active { background: #c6f6d5; color: #276749; }
@@ -197,7 +202,7 @@
         <table>
           <thead><tr>
             <th>コード</th><th>工場名</th><th>会社名</th><th>カテゴリ</th>
-            <th>認証</th><th>担当者</th><th>OEM</th><th>ステータス</th><th>備考</th><th>公式サイト</th>
+            <th>認証</th><th>担当者</th><th>OEM</th><th>ステータス</th><th>最小ロット</th><th>経済ロット</th><th>LT</th><th>備考</th><th>公式サイト</th>
           </tr></thead>
           <tbody id="facBody"></tbody>
         </table>
@@ -250,6 +255,17 @@
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeMakerDeleteModal()">キャンセル</button>
       <button class="btn btn-danger" onclick="confirmMakerDelete()">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Factory Notes Modal -->
+<div class="modal-overlay" id="facNotesModal" onclick="if(event.target===this)closeFacNotesModal()">
+  <div class="modal wide">
+    <h2 id="facNotesTitle"></h2>
+    <pre id="facNotesContent" style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.7;color:#333;margin-top:12px;"></pre>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeFacNotesModal()">閉じる</button>
     </div>
   </div>
 </div>
@@ -597,7 +613,7 @@ function closeMatDetail() { document.getElementById('matDetailModal').classList.
 async function fetchFactories() {
   const search = document.getElementById('facSearch').value.trim();
   const status = document.getElementById('facStatus').value;
-  document.getElementById('facBody').innerHTML = '<tr><td colspan="10" class="loading">読み込み中...</td></tr>';
+  document.getElementById('facBody').innerHTML = '<tr><td colspan="13" class="loading">読み込み中...</td></tr>';
   let q = twoDb.from('factories')
     .select('factory_code,factory_name,company_name,categories,certifications,contact_person,oem_availability,status,notes,website_url,specialties', { count: 'exact' })
     .order('factory_code');
@@ -605,17 +621,39 @@ async function fetchFactories() {
   if (status) q = q.eq('status', status);
   const { data, count, error } = await q;
   if (error) {
-    document.getElementById('facBody').innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#e53e3e;">取得エラー: ' + esc(error.message) + '</td></tr>';
+    document.getElementById('facBody').innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:#e53e3e;">取得エラー: ' + esc(error.message) + '</td></tr>';
     return;
   }
   document.getElementById('facCount').textContent = `${count || 0} 件`;
   renderFactories(data || []);
 }
 
+function parseFactoryNotes(notes) {
+  if (!notes) return { minLot: '', econLot: '', leadTime: '' };
+  const minMatch = notes.match(/[最][小低]ロット[：:\s　]*([^。\n|\/【\]]+)/);
+  const econMatch = notes.match(/経済ロット[：:\s　]*([^。\n|\/【\]]+)/);
+  const ltMatch = notes.match(/(?:製造)?リードタイム[：:\s　]*([^。\n|\/【\]]+)/);
+  const trim25 = s => s ? s.trim().replace(/\s+/g, ' ').substring(0, 25) : '';
+  return {
+    minLot: trim25(minMatch ? minMatch[1] : ''),
+    econLot: trim25(econMatch ? econMatch[1] : ''),
+    leadTime: trim25(ltMatch ? ltMatch[1] : ''),
+  };
+}
+
+function openFacNotesModal(name, notes) {
+  document.getElementById('facNotesTitle').textContent = name;
+  document.getElementById('facNotesContent').textContent = notes || '（備考なし）';
+  document.getElementById('facNotesModal').classList.add('active');
+}
+function closeFacNotesModal() {
+  document.getElementById('facNotesModal').classList.remove('active');
+}
+
 function renderFactories(rows) {
   const tbody = document.getElementById('facBody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#999;">データがありません</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:#999;">データがありません</td></tr>';
     return;
   }
   const statusBadge = s => {
@@ -624,7 +662,13 @@ function renderFactories(rows) {
     return `<span class="badge ${cls}">${esc(s)}</span>`;
   };
   const arrJoin = v => Array.isArray(v) ? v.join('、') : (v || '');
-  tbody.innerHTML = rows.map(r => `<tr>
+  tbody.innerHTML = rows.map(r => {
+    const p = parseFactoryNotes(r.notes);
+    const notesLabel = r.notes ? r.notes.replace(/\n/g, ' ').substring(0, 30) + (r.notes.length > 30 ? '…' : '') : '';
+    const notesCell = r.notes
+      ? `<button class="notes-btn" onclick="openFacNotesModal(${JSON.stringify(esc(r.factory_name))},${JSON.stringify(r.notes)})" title="${esc(r.notes)}">${esc(notesLabel)}</button>`
+      : '';
+    return `<tr>
     <td>${esc(r.factory_code)}</td>
     <td style="font-weight:500;" title="${esc(r.factory_name)}">${esc(r.factory_name)}</td>
     <td title="${esc(r.company_name)}">${esc(r.company_name)}</td>
@@ -633,9 +677,13 @@ function renderFactories(rows) {
     <td>${esc(r.contact_person)}</td>
     <td>${esc(r.oem_availability)}</td>
     <td>${statusBadge(r.status)}</td>
-    <td title="${esc(r.notes)}">${esc(r.notes)}</td>
+    <td class="lot-val">${esc(p.minLot)}</td>
+    <td class="lot-val">${esc(p.econLot)}</td>
+    <td class="lot-val">${esc(p.leadTime)}</td>
+    <td style="max-width:180px;">${notesCell}</td>
     <td>${r.website_url ? '<a href="'+esc(r.website_url)+'" target="_blank">サイト</a>' : ''}</td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 
 // ===== Tab 4: ナレッジDB =====
