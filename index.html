@@ -670,26 +670,26 @@ function renderFactories(rows) {
   tbody.innerHTML = rows.map(r => {
     const p = parseFactoryNotes(r.notes);
     const notesLabel = r.notes ? r.notes.replace(/\n/g, ' ').substring(0, 30) + (r.notes.length > 30 ? '…' : '') : '';
-    const pop = (t) => t ? `onmouseenter="showPopover(${JSON.stringify(t)})" onmouseleave="hidePopover()"` : '';
+    const dp = (t) => t ? ` data-pop="${esc(t)}"` : '';
     const notesCell = r.notes
-      ? `<button class="notes-btn" onclick="openFacNotesModal(${JSON.stringify(esc(r.factory_name))},${JSON.stringify(r.notes)})" ${pop(r.notes)}>詳細</button>`
+      ? `<button class="notes-btn">詳細</button>`
       : '';
     return `<tr>
     <td>${esc(r.factory_code)}</td>
-    <td style="font-weight:500;" ${pop(r.factory_name)}>${esc(r.factory_name)}</td>
-    <td ${pop(arrJoin(r.categories))}>${esc(arrJoin(r.categories))}</td>
-    <td ${pop(arrJoin(r.certifications))}>${esc(arrJoin(r.certifications))}</td>
-    <td ${pop(r.contact_person)}>${esc(r.contact_person)}</td>
+    <td style="font-weight:500;"${dp(r.factory_name)}>${esc(r.factory_name)}</td>
+    <td${dp(arrJoin(r.categories))}>${esc(arrJoin(r.categories))}</td>
+    <td${dp(arrJoin(r.certifications))}>${esc(arrJoin(r.certifications))}</td>
+    <td${dp(r.contact_person)}>${esc(r.contact_person)}</td>
     <td>${statusBadge(r.status)}</td>
-    <td class="lot-val" ${pop(p.minLot)}>${esc(p.minLot)}</td>
-    <td class="lot-val" ${pop(p.econLot)}>${esc(p.econLot)}</td>
-    <td class="lot-val" ${pop(p.leadTime)}>${esc(p.leadTime)}</td>
-    <td class="lot-val" ${pop(p.price)}>${esc(p.price)}</td>
-    <td class="lot-val" ${pop(p.shelfLife)}>${esc(p.shelfLife)}</td>
-    <td class="lot-val" style="color:#c53030;" ${pop(p.ngReason)}>${esc(p.ngReason)}</td>
-    <td class="lot-val" ${pop(p.delivery)}>${esc(p.delivery)}</td>
+    <td class="lot-val"${dp(p.minLot)}>${esc(p.minLot)}</td>
+    <td class="lot-val"${dp(p.econLot)}>${esc(p.econLot)}</td>
+    <td class="lot-val"${dp(p.leadTime)}>${esc(p.leadTime)}</td>
+    <td class="lot-val"${dp(p.price)}>${esc(p.price)}</td>
+    <td class="lot-val"${dp(p.shelfLife)}>${esc(p.shelfLife)}</td>
+    <td class="lot-val" style="color:#c53030;"${dp(p.ngReason)}>${esc(p.ngReason)}</td>
+    <td class="lot-val"${dp(p.delivery)}>${esc(p.delivery)}</td>
     <td style="white-space:nowrap;color:#888;font-size:12px;">${r.updated_at ? r.updated_at.substring(0,10).replace(/-/g,'/') : ''}</td>
-    <td style="max-width:180px;">${notesCell}</td>
+    <td data-notes="${esc(r.notes)}" data-name="${esc(r.factory_name)}">${notesCell}</td>
     <td>${r.website_url ? '<a href="'+esc(r.website_url)+'" target="_blank">サイト</a>' : ''}</td>
   </tr>`;
   }).join('');
@@ -837,6 +837,24 @@ function showPopover(text) {
   _popover.style.display = 'block';
 }
 function hidePopover() { _popover.style.display = 'none'; }
+
+// facBody: ポップオーバー & 備考モーダル（イベントデリゲーション）
+const _facBody = document.getElementById('facBody');
+_facBody.addEventListener('mouseover', e => {
+  const td = e.target.closest('td[data-pop]');
+  if (td) { showPopover(td.dataset.pop); return; }
+  const notesTd = e.target.closest('td[data-notes]');
+  if (notesTd && notesTd.dataset.notes) showPopover(notesTd.dataset.notes);
+});
+_facBody.addEventListener('mouseout', e => {
+  if (!e.relatedTarget || !e.relatedTarget.closest('td[data-pop], td[data-notes]')) hidePopover();
+});
+_facBody.addEventListener('click', e => {
+  const btn = e.target.closest('.notes-btn');
+  if (!btn) return;
+  const td = btn.closest('td[data-notes]');
+  if (td) openFacNotesModal(td.dataset.name, td.dataset.notes);
+});
 </script>
 </body>
 </html>
