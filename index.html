@@ -241,7 +241,7 @@
     <label>取扱い原料</label><textarea id="fProducts"></textarea>
     <label>カタログURL</label><input type="text" id="fCatalog">
     <label>備考</label><textarea id="fNotes"></textarea>
-    <label>名刺交換日</label><input type="text" id="fCardDate">
+    <label>名刺交換日</label><input type="text" id="fCardDate" readonly placeholder="保存時に自動セット" style="background:#f5f5f5;color:#888;cursor:default">
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeMakerModal()">キャンセル</button>
       <button class="btn btn-primary" onclick="saveMaker()">保存</button>
@@ -471,7 +471,7 @@ async function saveMaker() {
     products: document.getElementById('fProducts').value.trim() || null,
     catalog_url: document.getElementById('fCatalog').value.trim() || null,
     notes: document.getElementById('fNotes').value.trim() || null,
-    card_exchange_date: document.getElementById('fCardDate').value.trim() || null,
+    card_exchange_date: new Date().toISOString().split('T')[0],
   };
   const editId = document.getElementById('editMakerId').value;
   const { error } = editId
